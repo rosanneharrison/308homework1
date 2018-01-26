@@ -1,0 +1,251 @@
+---
+title: "IEMS 308 Homework1"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+#Load data
+tab10000rows <- read.table("Medicare_Provider_Util_Payment_PUF_CY2015.txt", sep="\t", fill = TRUE, header = TRUE, nrows = 100000)
+
+MedicareData <- read.table("Medicare_Provider_Util_Payment_PUF_CY2015.txt", sep="\t", fill = TRUE, header = TRUE, nrows = 11000000, comment.char = "")
+
+#Clean data (noticed errors when first starting looking at summary stats)
+#examine data by looking at first 10000 rows -- looking into what is wrong with rows that have errors
+
+#instances where gender column is messed up
+table(tab10000rows$nppes_provider_gender)
+(1:nrow(tab10000rows))[tab10000rows[,6] == 11]
+(1:nrow(tab10000rows))[tab10000rows[,6] == 208.58]
+
+#test out removing these instances
+tab10000rows<-tab10000rows[!(tab10000rows$nppes_provider_gender != "F" & tab10000rows$nppes_provider_gender != "M" & tab10000rows$nppes_provider_gender != ""),]
+row.names(tab10000rows) <- 1:nrow(tab10000rows)
+tab10000rows <- droplevels(tab10000rows)
+
+```
+
+
+```{r}
+#Get actual data set ready for analysis
+
+#Pull only data from 50 US states
+MedicareDataUS = MedicareData[(MedicareData$nppes_provider_state == "AL" | MedicareData$nppes_provider_state == "AK" | MedicareData$nppes_provider_state == "AZ" | MedicareData$nppes_provider_state == "AR" | MedicareData$nppes_provider_state == "CA" | MedicareData$nppes_provider_state == "CO" | MedicareData$nppes_provider_state == "CT" | MedicareData$nppes_provider_state == "DE" | MedicareData$nppes_provider_state == "FL" | MedicareData$nppes_provider_state == "GA" | MedicareData$nppes_provider_state == "HI" | MedicareData$nppes_provider_state == "ID" | MedicareData$nppes_provider_state == "IL" | MedicareData$nppes_provider_state == "IN" | MedicareData$nppes_provider_state == "IA" | MedicareData$nppes_provider_state == "KS" | MedicareData$nppes_provider_state == "KY" | MedicareData$nppes_provider_state == "LA" | MedicareData$nppes_provider_state == "ME" | MedicareData$nppes_provider_state == "MD" | MedicareData$nppes_provider_state == "MA" | MedicareData$nppes_provider_state == "MI" | MedicareData$nppes_provider_state == "MN" | MedicareData$nppes_provider_state == "MS" | MedicareData$nppes_provider_state == "MO" | MedicareData$nppes_provider_state == "MT" | MedicareData$nppes_provider_state == "NE" | MedicareData$nppes_provider_state == "NV" | MedicareData$nppes_provider_state == "NH" | MedicareData$nppes_provider_state == "NJ" | MedicareData$nppes_provider_state == "NM" | MedicareData$nppes_provider_state == "NY" | MedicareData$nppes_provider_state == "NC" | MedicareData$nppes_provider_state == "ND" | MedicareData$nppes_provider_state == "OH" | MedicareData$nppes_provider_state == "OK" | MedicareData$nppes_provider_state == "OR" | MedicareData$nppes_provider_state == "PA" | MedicareData$nppes_provider_state == "RI" | MedicareData$nppes_provider_state == "SC" | MedicareData$nppes_provider_state == "SD" | MedicareData$nppes_provider_state == "TN" | MedicareData$nppes_provider_state == "TX" | MedicareData$nppes_provider_state == "UT" | MedicareData$nppes_provider_state == "VT" | MedicareData$nppes_provider_state == "VA" | MedicareData$nppes_provider_state == "WA" | MedicareData$nppes_provider_state == "WV" | MedicareData$nppes_provider_state == "WI" | MedicareData$nppes_provider_state == "WY"),]
+
+#make any non-numeric values in any of the 7 numeric columns = NA (check how many NAs with summary)
+MedicareDataUS$line_srvc_cnt <- as.numeric(as.character(MedicareDataUS$line_srvc_cnt)) 
+summary(MedicareDataUS$line_srvc_cnt)
+
+MedicareDataUS$bene_unique_cnt <- as.numeric(as.character(MedicareDataUS$bene_unique_cnt)) 
+summary(MedicareDataUS$bene_unique_cnt)
+
+MedicareData$bene_day_srvc_cnt <- as.numeric(as.character(MedicareData$bene_day_srvc_cnt)) 
+summary(MedicareData$bene_day_srvc_cnt)
+
+MedicareDataUS$average_Medicare_allowed_amt <- as.numeric(as.character(MedicareDataUS$average_Medicare_allowed_amt))
+summary(MedicareDataUS$average_Medicare_allowed_amt)
+
+MedicareDataUS$average_submitted_chrg_amt <- as.numeric(as.character(MedicareDataUS$average_submitted_chrg_amt))
+summary(MedicareDataUS$average_submitted_chrg_amt)
+
+MedicareDataUS$average_Medicare_payment_amt <- as.numeric(as.character(MedicareDataUS$average_Medicare_payment_amt))
+summary(MedicareDataUS$average_Medicare_payment_amt)
+
+MedicareDataUS$average_Medicare_standard_amt <- as.numeric(as.character(MedicareDataUS$average_Medicare_standard_amt)) 
+summary(MedicareDataUS$average_Medicare_standard_amt)
+
+#Remove all rows that contain NAs in any of the seven numeric columns --> eliminating missing data and erroneous rows
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$line_srvc_cnt)),]
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$bene_unique_cnt)),]
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$bene_day_srvc_cnt)),]
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$average_Medicare_allowed_amt)),]
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$average_submitted_chrg_amt)),]
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$average_Medicare_payment_amt)),]
+MedicareDataUS = MedicareDataUS[!(is.na(MedicareDataUS$average_Medicare_standard_amt)),]
+
+#re-number rows and drop levels that are no longer present
+row.names(MedicareDataUS) <- 1:nrow(MedicareDataUS)
+MedicareDataUS <- droplevels(MedicareDataUS)
+
+
+#Create concatenated versions of data for cluster analysis that can be easily processed by regular computer/R
+install.packages("plyr")
+library(plyr)
+states = ddply(MedicareDataUS, .(nppes_provider_state), summarize,
+               line_srvc_cnt=mean(line_srvc_cnt),
+               bene_unique_cnt=mean(bene_unique_cnt),
+               bene_day_srvc_cnt=mean(bene_day_srvc_cnt),
+               average_submitted_chrg_amt=mean(average_submitted_chrg_amt),
+               average_Medicare_allowed_amt=mean(average_Medicare_allowed_amt),
+               average_Medicare_payment_amt=mean(average_Medicare_payment_amt),
+               average_Medicare_standard_amt=mean(average_Medicare_standard_amt))
+
+Grouped1 = ddply(MedicareDataUS, .(nppes_credentials, nppes_provider_gender, nppes_entity_code, nppes_provider_state, provider_type, medicare_participation_indicator, place_of_service), summarize,
+               line_srvc_cnt_mean=mean(line_srvc_cnt),
+               bene_unique_cnt_mean=mean(bene_unique_cnt),
+               bene_unique_cnt_sum=sum(bene_unique_cnt),
+               bene_day_srvc_cnt_mean=mean(bene_day_srvc_cnt),
+               average_submitted_chrg_amt_mean=mean(average_submitted_chrg_amt),
+               average_Medicare_allowed_amt_mean=mean(average_Medicare_allowed_amt),
+               average_Medicare_payment_amt_mean=mean(average_Medicare_payment_amt),
+               average_Medicare_standard_amt_mean=mean(average_Medicare_standard_amt),
+               percent_covered_mean=mean(average_Medicare_payment_amt/average_submitted_chrg_amt),
+               percent_covered_standardized_mean=mean(average_Medicare_standard_amt/average_submitted_chrg_amt))
+              
+row.names(Grouped1) <- 1:nrow(Grouped1)
+Grouped1 <- droplevels(Grouped1)
+```
+
+
+```{r}
+#Analyze combined data
+
+#boxplots by state
+boxplot(average_Medicare_standard_amt_mean~nppes_provider_state, data = Grouped1, ylim = c(0,500))
+boxplot(average_submitted_chrg_amt_mean~nppes_provider_state, data = Grouped1, ylim = c(0,1000))
+boxplot(average_Medicare_payment_amt_mean~nppes_provider_state, data = Grouped1, ylim = c(0,1000))
+boxplot(bene_unique_cnt_mean ~nppes_provider_state, data = Grouped1, ylim = c(0,1000))
+boxplot(average_submitted_chrg_amt_sum~nppes_provider_state, data = Grouped1, ylim = c(0,10000))
+
+#boxplots by provider type
+boxplot(average_Medicare_standard_amt_mean~provider_type, data = Grouped1, ylim = c(0,700), ylab = "Average Medicare Standard Amount (mean)", xlab = "Provider Type")
+boxplot(average_Medicare_payment_amt_mean~provider_type, data = Grouped1, ylim = c(0,500))
+#about same as above for separation
+boxplot(average_Medicare_allowed_amt_mean~provider_type, data = Grouped1, ylim = c(0,900))
+#number of people
+boxplot(bene_unique_cnt_mean~provider_type, data = Grouped1, ylim = c(0,1000), ylab = "Count of Unique Medicare Beneficiaries (mean)", xlab = "Provider Type")
+
+#what Medicare covers (but also correlated to $$ for Medicare program)
+boxplot(percent_covered_mean ~provider_type, data = Grouped1, ylim = c(0,1))
+boxplot(percent_covered_standardized_mean ~provider_type, data = Grouped1, ylim = c(0,1))
+
+summary(Grouped1$provider_type)
+df_uniq <- unique(Grouped1$provider_type)
+length(df_uniq)
+
+
+
+```
+
+
+
+```{r}
+
+#CLUSTERING
+#standardize data
+Grouped1_Standard = Grouped1
+
+#standardize bene_mean
+Grouped1_Standard$bene_unique_cnt_mean = (Grouped1_Standard$bene_unique_cnt_mean - min(Grouped1_Standard$bene_unique_cnt_mean))
+Grouped1_Standard$bene_unique_cnt_mean = (Grouped1_Standard$bene_unique_cnt_mean / max(Grouped1_Standard$bene_unique_cnt_mean))
+
+#standardize bene_sum
+Grouped1_Standard$bene_unique_cnt_sum = (Grouped1_Standard$bene_unique_cnt_sum - min(Grouped1_Standard$bene_unique_cnt_sum))
+Grouped1_Standard$bene_unique_cnt_sum = (Grouped1_Standard$bene_unique_cnt_sum / max(Grouped1_Standard$bene_unique_cnt_sum))
+
+#standardize allowed
+Grouped1_Standard$average_Medicare_allowed_amt_mean = (Grouped1_Standard$average_Medicare_allowed_amt_mean - min(Grouped1_Standard$average_Medicare_allowed_amt_mean))
+Grouped1_Standard$average_Medicare_allowed_amt_mean = (Grouped1_Standard$average_Medicare_allowed_amt_mean / max(Grouped1_Standard$average_Medicare_allowed_amt_mean))
+
+#standardize payment
+Grouped1_Standard$average_Medicare_payment_amt_mean = (Grouped1_Standard$average_Medicare_payment_amt_mean - min(Grouped1_Standard$average_Medicare_payment_amt_mean))
+Grouped1_Standard$average_Medicare_payment_amt_mean = (Grouped1_Standard$average_Medicare_payment_amt_mean / max(Grouped1_Standard$average_Medicare_payment_amt_mean))
+
+#standardize col submitted
+Grouped1_Standard$average_submitted_chrg_amt_mean = (Grouped1_Standard$average_submitted_chrg_amt_mean - min(Grouped1_Standard$average_submitted_chrg_amt_mean))
+Grouped1_Standard$average_submitted_chrg_amt_mean = (Grouped1_Standard$average_submitted_chrg_amt_mean / max(Grouped1_Standard$average_submitted_chrg_amt_mean))
+
+#standardize col standardized
+Grouped1_Standard$average_Medicare_standard_amt_mean = (Grouped1_Standard$average_Medicare_standard_amt_mean - min(Grouped1_Standard$average_Medicare_standard_amt_mean))
+Grouped1_Standard$average_Medicare_standard_amt_mean = (Grouped1_Standard$average_Medicare_standard_amt_mean / max(Grouped1_Standard$average_Medicare_standard_amt_mean))
+
+#standardize col percent covered
+Grouped1_Standard$percent_covered_mean = (Grouped1_Standard$percent_covered_mean - min(Grouped1_Standard$percent_covered_mean))
+Grouped1_Standard$percent_covered_mean = (Grouped1_Standard$percent_covered_mean / max(Grouped1_Standard$percent_covered_mean))
+
+#standardize col percent covered standardized
+Grouped1_Standard$percent_covered_standardized_mean = (Grouped1_Standard$percent_covered_standardized_mean - min(Grouped1_Standard$percent_covered_standardized_mean))
+Grouped1_Standard$percent_covered_standardized_mean = (Grouped1_Standard$percent_covered_standardized_mean / max(Grouped1_Standard$percent_covered_standardized_mean))
+
+
+#CLUSTER
+# Initialize total within sum of squares error: wss
+wss = 0
+#repeat using centers = 1-10
+mediCluster2 <- kmeans(Grouped1_Standard[, c(9,15)], centers = 10, nstart = 20)
+wss[10] = mediCluster2$tot.withinss
+
+# Plot total within sum of squares vs. number of clusters
+plot(1:10, wss, type = "b", xlab = "Number of Clusters", ylab = "Within groups sum of squares")
+
+#Cluster with optimal number of centers
+mediCluster <- kmeans(Grouped1_Standard[, c(9,15)], 5, nstart = 20)
+mediCluster$centers
+mediCluster$totss
+mediCluster$withinss
+mediCluster$tot.withinss
+mediCluster$betweenss
+mediCluster$size
+
+#load clusters in data frames
+C1 = Grouped1[mediCluster$cluster==1,]
+C2 = Grouped1[mediCluster$cluster==2,]
+C3 = Grouped1[mediCluster$cluster==3,]
+C4 = Grouped1[mediCluster$cluster==4,]
+C5 = Grouped1[mediCluster$cluster==5,]
+
+#analyze clusters, look at frequency of each provider type 
+length(unique(C1$provider_type))
+summary(C1$average_Medicare_standard_amt_mean)
+summary(C1$bene_unique_cnt_mean)
+occurences1 = as.data.frame(table(unlist(C1$provider_type)))
+occurences1$overall_freq = as.data.frame(table(unlist(Grouped1$provider_type)))
+
+length(unique(C2$provider_type))
+summary(C2$average_Medicare_standard_amt_mean)
+summary(C2$bene_unique_cnt_mean)
+occurences2 = as.data.frame(table(unlist(C2$provider_type)))
+occurences2$overall_freq = as.data.frame(table(unlist(Grouped1$provider_type)))
+
+length(unique(C3$provider_type))
+summary(C3$average_Medicare_standard_amt_mean)
+summary(C3$bene_unique_cnt_mean)
+occurences3 = as.data.frame(table(unlist(C3$provider_type)))
+occurences3$overall_freq = as.data.frame(table(unlist(Grouped1$provider_type)))
+
+length(unique(C4$provider_type))
+summary(C4$average_Medicare_standard_amt_mean)
+summary(C4$bene_unique_cnt_mean)
+occurences4 = as.data.frame(table(unlist(C4$provider_type)))
+occurences4$overall_freq = as.data.frame(table(unlist(Grouped1$provider_type)))
+
+length(unique(C5$provider_type))
+summary(C5$average_Medicare_standard_amt_mean)
+summary(C5$bene_unique_cnt_mean)
+occurences5 = as.data.frame(table(unlist(C5$provider_type)))
+occurences5$overall_freq = as.data.frame(table(unlist(Grouped1$provider_type)))
+
+#write clusters to CSV for further analysis of provider types (to determine what fraction of each provider type is in each cluster)
+write.csv(C1, "C1.csv")
+write.csv(C2, "C2.csv")
+write.csv(C3, "C3.csv")
+write.csv(C4, "C4.csv")
+write.csv(C5, "C5.csv")
+
+```
+
+
+```{r}
+#analyze quality of clusters
+
+install.packages("cluster")
+library(cluster)
+sil = silhouette(mediCluster$cluster, dist = Grouped1_Standard[, c(9,15)])
+#this code will not run on any computer that I have access to - just wanted to leave it here to show that I attempted to analyze my clusters using silhouette!
+```
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
